@@ -114,25 +114,26 @@ def hist_match_worker(src_path, ref_path, dst_path, match_proportion,
     logger.info("Matching {} to histogram of {} using {} color space".format(
         os.path.basename(src_path), os.path.basename(ref_path), color_space))
 
+    bixs = tuple(int(x) for x in bands.split(','))
+    bixs0 = tuple(int(x) - 1 for x in bands.split(','))
+    band_names = [color_space[x] for x in range(3)]  # assume 1 letter per band
+
     with rasterio.open(src_path) as src:
         profile = src.profile.copy()
-        src_arr = src.read(masked=True)
+        src_arr = src.read(bixs, masked=True)
         src_mask, src_fill = calculate_mask(src, src_arr)
         src_arr = src_arr.filled()
 
     with rasterio.open(ref_path) as ref:
-        ref_arr = ref.read(masked=True)
+        ref_arr = ref.read(bixs, masked=True)
         ref_mask, ref_fill = calculate_mask(ref, ref_arr)
         ref_arr = ref_arr.filled()
 
     src = cs_forward(src_arr, color_space)
     ref = cs_forward(ref_arr, color_space)
 
-    bixs = tuple([int(x) - 1 for x in bands.split(',')])
-    band_names = [color_space[x] for x in bixs]  # assume 1 letter per band
-
     target = src.copy()
-    for i, b in enumerate(bixs):
+    for b in bixs0:
         logger.debug("Processing band {}".format(b))
         src_band = src[b]
         ref_band = ref[b]
@@ -187,4 +188,4 @@ def hist_match_worker(src_path, ref_path, dst_path, match_proportion,
             src_path, ref_path, dst_path,
             src, ref, target,
             output=outplot,
-            bands=tuple(zip(bixs, band_names)))
+            bands=tuple(zip(bixs0, band_names)))
